@@ -24,38 +24,35 @@
 (defun path-join (dirname filename)
   (concat (file-name-as-directory dirname) filename))
 
-(defun last-atom (x)
-  (car (reverse x)))
-
-;;;_* --- copying functions ---
-
-(defun docopy (filename)
-  "dirname1 and dirname2 are dynamically scoped"
-  (message (format "Copying %s ..." filename))
-  (copy-file (path-join dirname1 filename) 
-	     (path-join dirname2 filename) t t)
-  (message "Done.")
-  nil)
-
-(defun docopy-p (filename)
-  (flet ( (nbytes (f) (nth 7 (file-attributes f))) )
-    (let ( (x (path-join dirname1 filename))
-	   (y (path-join dirname2 filename)) )
-      (or (not (file-exists-p y))
-	  (file-newer-than-file-p x y)
-	  (> (nbytes x) (nbytes y))))))
-
 (defun is-dot-p (filename) 
   (equal "." (substring filename 0 1)))
+
+(defun last-atom (x)
+  (car (reverse x)))
 
 ;;;_* --- main syncing function, revised ---
 
 (defun sync (dirname1 dirname2)
   "args: string, string"
+  (flet ((do-copy (filename)
+		 "dirname1 and dirname2 are dynamically scoped"
+		 (message (format "Copying %s ..." filename))
+		 (copy-file (path-join dirname1 filename) 
+			    (path-join dirname2 filename) t t)
+		 (message "Done.")
+		 nil)
+	 (do-copy-p (filename)
+		   "dirname1 and dirname2 are dynamically scoped"		   
+		   (flet ( (nbytes (f) (nth 7 (file-attributes f))) )
+		     (let ( (x (path-join dirname1 filename))
+			    (y (path-join dirname2 filename)) )
+		       (or (not (file-exists-p y))
+			   (file-newer-than-file-p x y)
+			   (> (nbytes x) (nbytes y)))))))
     (let (filelist copythese)
       (setq filelist (remove-if 'is-dot-p (directory-files dirname1)))
-      (setq copythese (remove-if-not 'docopy-p filelist))
-      (mapc 'docopy copythese)))
+      (setq copythese (remove-if-not 'do-copy-p filelist))
+      (mapc 'do-copy copythese))))
 
 ;;;_* --- move/copy subfolders ---
 
